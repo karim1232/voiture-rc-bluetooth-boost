@@ -4,7 +4,7 @@ Projet embarqué de 3A à Polytech Grenoble, fait par Karim Glelah et Mohamed Ha
 
 On a retiré la carte d'origine d'une voiture RC à 4 moteurs (direction skid-steer) pour la piloter en Bluetooth depuis une manette faite maison. La manette et la voiture ont chacune une STM32 Nucleo F446RE, programmée en C directement sur les registres (framework Polytech, sans HAL). La partie électronique est un convertisseur boost 5 V vers 12 V commandé par un NE555.
 
-Documents : [rapport final](docs/Rapport_final.pdf), [cahier des charges](docs/Cahier_des_charges.pdf), [composants](docs/composants.md), [brochage](docs/pinout.md).
+Documents : [rapport final](docs/Rapport_final.pdf), [cahier des charges](docs/Cahier_des_charges.pdf), [composants](docs/composants.md), [brochage](docs/pinout.md).    
 
 ## Arborescence
 
