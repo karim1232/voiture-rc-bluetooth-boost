@@ -12,7 +12,7 @@
 | `A4952_A4953_allegro.pdf` | A4953 (driver du shield) | Allegro |
 | `microbot_dual_dc_motor_shield_v2_MR007-001-2.pdf` | Dual DC Motor Shield V2 | Microbot |
 | `TCN75A_microchip.pdf` | TCN75A (sur le shield) | Microchip |
-| `HC-05_components101.pdf` | HC-05 (pas de datasheet constructeur officielle) | components101 |
+| `HC-05_components101.pdf` | HC-05 (il n'existe pas de datasheet officielle du fabricant) | components101 |
 | `Qwiic_Joystick_sparkfun_hookup_guide.pdf` | SparkFun Qwiic Joystick | SparkFun |
 | `ATtiny85_microchip.pdf` | ATtiny85 (MCU du joystick) | Microchip |
-| `UM232H_ftdi.pdf` | FTDI UM232H (non utilisé) | FTDI |
+| `UM232H_ftdi.pdf` | FTDI UM232H (pas utilisé) | FTDI |

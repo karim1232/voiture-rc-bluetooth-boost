@@ -1,10 +1,10 @@
-# Voiture RC Bluetooth + boost 5 V → 12 V
+# Voiture RC Bluetooth et boost 5 V vers 12 V
 
-Projet embarqué de 3A, Polytech Grenoble, réalisé par Karim Glelah et Mohamed Hashem (environ 30 h, matériel du labo uniquement).
+Projet embarqué de 3A à Polytech Grenoble, fait par Karim Glelah et Mohamed Hashem en une trentaine d'heures, avec uniquement le matériel du labo.
 
-Une voiture RC à 4 moteurs (skid-steer) est pilotée en Bluetooth par une manette maison. Il y a une **STM32 Nucleo F446RE** dans chaque carte, programmée en C avec accès direct aux registres (framework Polytech, sans HAL). Le projet comprend aussi un **convertisseur boost 5 V → 12 V** commandé par un oscillateur **NE555**.
+On a retiré la carte d'origine d'une voiture RC à 4 moteurs (direction skid-steer) pour la piloter en Bluetooth depuis une manette faite maison. La manette et la voiture ont chacune une STM32 Nucleo F446RE, programmée en C directement sur les registres (framework Polytech, sans HAL). La partie électronique est un convertisseur boost 5 V vers 12 V commandé par un NE555.
 
-📄 [Rapport final](docs/Rapport_final.pdf) · [Cahier des charges](docs/Cahier_des_charges.pdf) · [Composants](docs/composants.md) · [Brochage](docs/pinout.md)
+Documents : [rapport final](docs/Rapport_final.pdf), [cahier des charges](docs/Cahier_des_charges.pdf), [composants](docs/composants.md), [brochage](docs/pinout.md).
 
 ## Arborescence
 
@@ -37,9 +37,11 @@ Une voiture RC à 4 moteurs (skid-steer) est pilotée en Bluetooth par une manet
 Joystick ──I2C──► Nucleo manette ──USART1──► HC-05 maître ))) HC-05 esclave ──USART1──► Nucleo voiture ──PWM/GPIO──► Motor Shield ──► 4 moteurs
 ```
 
-1. La manette lit X et Y (adresse `0x20`, 10 bits), applique une zone morte de ±50 autour de 512, puis choisit l'axe dominant.
-2. Elle envoie **un octet ASCII**, seulement quand la commande change : `F` avant, `B` arrière, `L` gauche, `R` droite, `S` stop.
-3. La voiture exécute `motor_forward(70)`, `motor_back(70)`, `motor_left(50)`, `motor_right(50)` ou `motor_stop()`. Les autres octets sont ignorés.
+La manette lit X et Y sur le joystick (adresse `0x20`, valeurs sur 10 bits). Si les deux axes restent à moins de 50 du centre (512), elle considère que le joystick est au repos ; sinon c'est l'axe le plus incliné qui décide de la commande.
+
+Elle envoie alors un seul octet ASCII, et seulement quand la commande change : `F` avant, `B` arrière, `L` gauche, `R` droite, `S` stop.
+
+La voiture appelle `motor_forward(70)`, `motor_back(70)`, `motor_left(50)`, `motor_right(50)` ou `motor_stop()` selon l'octet reçu, et ignore tout le reste.
 
 | Fichier | Rôle |
 |---|---|
@@ -51,9 +53,9 @@ Joystick ──I2C──► Nucleo manette ──USART1──► HC-05 maître )
 
 ## Compiler et flasher
 
-Dans STM32CubeIDE : *File → Import → Existing Projects into Workspace*, puis choisir `code/controlleur` ou `code/robot`. On peut aussi compiler avec `make` dans le dossier du projet (Makefile du framework Polytech). Le binaire produit est `bin/prog.elf`.
+Dans STM32CubeIDE, passer par *File → Import → Existing Projects into Workspace* et choisir `code/controlleur` ou `code/robot`. On peut aussi lancer `make` dans le dossier du projet (Makefile du framework Polytech) ; le binaire sort dans `bin/prog.elf`.
 
-## Boost 5 V → 12 V
+## Le boost
 
 | Grandeur | Formule | Valeur |
 |---|---|---|
@@ -61,14 +63,14 @@ Dans STM32CubeIDE : *File → Import → Existing Projects into Workspace*, puis
 | Rapport cyclique | D = (R1 + R2) / (R1 + 2 R2) | 58,3 % |
 | Sortie idéale | Vout = Vin / (1 − D) | 12 V pour 5 V |
 
-Simulation LTspice de `oscillateur_boost.asc` (L = 1 mH, MBR745, Ce = Cs = 1 µF, shunt 0,1 Ω) :
+La simulation LTspice `oscillateur_boost.asc` utilise L = 1 mH, une MBR745, Ce = Cs = 1 µF et un shunt de 0,1 Ω. Moyenne de la sortie entre 8 et 10 ms :
 
-| Charge | Vout moyenne simulée (8-10 ms) |
+| Charge | Vout simulée |
 |---|---|
 | 470 Ω | 12,6 V |
 | 1 kΩ | 16,9 V (conduction discontinue) |
 
-Écarts entre la simulation et la carte :
+Deux composants de la carte diffèrent de la simulation :
 
 | Composant | Simulation | Carte |
 |---|---|---|
@@ -79,14 +81,14 @@ Simulation LTspice de `oscillateur_boost.asc` (L = 1 mH, MBR745, Ce = Cs = 1 µF
 
 | Partie | État |
 |---|---|
-| Moteurs (PWM + sens) | ✅ |
-| Liaison Bluetooth + protocole | ✅ |
-| Joystick I2C | ✅ |
-| Boost + NE555 sur plaque perforée | ✅ 12 V mesurés |
-| Montage final intégré | ❌ soudures défectueuses (première expérience de soudure) |
+| Moteurs (PWM + sens) | fonctionne |
+| Liaison Bluetooth + protocole | fonctionne |
+| Joystick I2C | fonctionne |
+| Boost + NE555 sur plaque perforée | fonctionne, 12 V mesurés |
+| Montage final intégré | non abouti : soudures ratées (c'était notre première fois) |
 
-## Limites connues
+## Limites
 
-- Si une transaction I2C est interrompue, le joystick bloque SDA : il faut couper puis remettre son alimentation.
-- La vitesse proportionnelle calculée par la manette n'est pas transmise : la vitesse est fixée côté voiture.
-- Le boost n'a pas de régulation : Vout dépend fortement de la charge.
+- Si une transaction I2C est coupée en plein milieu, le joystick bloque la ligne SDA. Il faut couper puis remettre son alimentation.
+- La manette calcule une vitesse proportionnelle à l'inclinaison mais ne l'envoie pas : la vitesse est fixée côté voiture.
+- Le boost n'est pas régulé, donc sa tension de sortie dépend beaucoup de la charge.
