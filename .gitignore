@@ -1,0 +1,31 @@
+# Workspace STM32CubeIDE / Eclipse
+.metadata/
+RemoteSystemsTempFiles/
+
+# Build (régénéré par make)
+obj/
+bin/
+Debug/
+Release/
+*.o
+*.d
+*.lst
+*.elf
+*.bin
+*.map
+*.su
+
+# LTspice (fichiers générés)
+*.raw
+*.log
+*.net
+*.plt
+*.fft
+
+# Office (fichiers de verrou)
+~$*
+
+# Système
+Thumbs.db
+desktop.ini
+.DS_Store
