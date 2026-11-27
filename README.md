@@ -1,94 +1,94 @@
-# Voiture RC Bluetooth et boost 5 V vers 12 V
+# Bluetooth RC car and 5 V to 12 V boost converter
 
-Projet embarqué de 3A à Polytech Grenoble, fait par Karim Glelah et Mohamed Hashem en une trentaine d'heures, avec uniquement le matériel du labo.
+3rd-year embedded systems project at Polytech Grenoble, by Karim Glelah and Mohamed Hashem, done in about thirty hours with lab equipment only.
 
-On a retiré la carte d'origine d'une voiture RC à 4 moteurs (direction skid-steer) pour la piloter en Bluetooth depuis une manette faite maison. La manette et la voiture ont chacune une STM32 Nucleo F446RE, programmée en C directement sur les registres (framework Polytech, sans HAL). La partie électronique est un convertisseur boost 5 V vers 12 V commandé par un NE555.
+We removed the stock receiver board from a 4-motor RC car (skid-steer) and drove it over Bluetooth from a homemade controller. The controller and the car each run on an STM32 Nucleo F446RE, programmed in C directly at register level (Polytech framework, no HAL). The electronics part is a 5 V to 12 V boost converter switched by an NE555 oscillator.
 
-Documents : [rapport final](docs/Rapport_final.pdf), [cahier des charges](docs/Cahier_des_charges.pdf), [composants](docs/composants.md), [brochage](docs/pinout.md).    
+Documents (in French): [final report](docs/Rapport_final.pdf), [specifications](docs/Cahier_des_charges.pdf). In English: [components](docs/composants.md), [pinout](docs/pinout.md).
 
-## Arborescence     
+## Repository layout
 
 ```
 .
 ├── code/
-│   ├── controlleur/            projet STM32CubeIDE de la manette (joystick I2C + HC-05 maître)
-│   ├── robot/                  projet STM32CubeIDE de la voiture (Motor Shield + HC-05 esclave)
-│   └── test_moteurs_arduino/   premier essai des moteurs sous Arduino IDE
+│   ├── controlleur/            STM32CubeIDE project for the controller (I2C joystick + master HC-05)
+│   ├── robot/                  STM32CubeIDE project for the car (Motor Shield + slave HC-05)
+│   └── test_moteurs_arduino/   first motor test with the Arduino IDE
 ├── simulation/
-│   ├── oscillateur.asc         NE555 astable seul (LTspice)
-│   └── oscillateur_boost.asc   NE555 + étage boost, charge 470 Ω (LTspice)
+│   ├── oscillateur.asc         NE555 astable oscillator alone (LTspice)
+│   └── oscillateur_boost.asc   NE555 + boost stage, 470 Ω load (LTspice)
 ├── docs/
-│   ├── Rapport_final.pdf / .docx
-│   ├── Cahier_des_charges.pdf / .docx
-│   ├── composants.md           tableau des composants
-│   └── pinout.md               brochage des deux cartes
-├── datasheets/                 fiches techniques (voir datasheets/README.md)
+│   ├── Rapport_final.pdf / .docx       final report (French)
+│   ├── Cahier_des_charges.pdf / .docx  specifications (French)
+│   ├── composants.md                   component list
+│   └── pinout.md                       pinout of both boards
+├── datasheets/                 datasheets (see datasheets/README.md)
 └── photos/
-    ├── voiture_origine/    voiture et carte QC-029RX d'origine
-    ├── composants/         HC-05, shield, joystick, FTDI, transistors du labo
-    ├── montages/           câblage voiture et manette
-    ├── boost/              boost sur plaque d'essai puis plaque perforée
-    └── captures/           test de la liaison Bluetooth (Hercules)
+    ├── voiture_origine/    the car and its original QC-029RX board
+    ├── composants/         HC-05, shield, joystick, FTDI, lab transistors
+    ├── montages/           car and controller wiring
+    ├── boost/              boost on a breadboard, then on a perfboard
+    └── captures/           Bluetooth link test (Hercules terminal)
 ```
 
-## Fonctionnement
+## How it works
 
 ```
-Joystick ──I2C──► Nucleo manette ──USART1──► HC-05 maître ))) HC-05 esclave ──USART1──► Nucleo voiture ──PWM/GPIO──► Motor Shield ──► 4 moteurs
+Joystick ──I2C──► controller Nucleo ──USART1──► master HC-05 ))) slave HC-05 ──USART1──► car Nucleo ──PWM/GPIO──► Motor Shield ──► 4 motors
 ```
 
-La manette lit X et Y sur le joystick (adresse `0x20`, valeurs sur 10 bits). Si les deux axes restent à moins de 50 du centre (512), elle considère que le joystick est au repos ; sinon c'est l'axe le plus incliné qui décide de la commande.
+The controller reads X and Y from the joystick (address `0x20`, 10-bit values). If both axes stay within 50 of the center (512), the joystick counts as released; otherwise the axis with the largest deflection decides the command.
 
-Elle envoie alors un seul octet ASCII, et seulement quand la commande change : `F` avant, `B` arrière, `L` gauche, `R` droite, `S` stop.
+It then sends a single ASCII byte, only when the command changes: `F` forward, `B` back, `L` left, `R` right, `S` stop.
 
-La voiture appelle `motor_forward(70)`, `motor_back(70)`, `motor_left(50)`, `motor_right(50)` ou `motor_stop()` selon l'octet reçu, et ignore tout le reste.
+The car calls `motor_forward(70)`, `motor_back(70)`, `motor_left(50)`, `motor_right(50)` or `motor_stop()` depending on the byte, and ignores anything else.
 
-| Fichier | Rôle |
+| File | Role |
 |---|---|
 | `code/controlleur/src/i2c.c` | I2C1 (PB8/PB9, AF4, 100 kHz) |
-| `code/controlleur/src/joystick.c` | lecture des axes, zone morte, conversion en commande |
-| `code/*/src/bluetooth.c` | USART1 (PA9/PA10, AF7, 9600 bauds, BRR = 9375) |
-| `code/robot/src/mouvement.c` | TIM3 PWM 1 kHz (PB4, PC7) + sens (PB3, PB10) |
-| `code/*/src/main.c` | boucle principale de chaque carte |
+| `code/controlleur/src/joystick.c` | axis reading, dead zone, conversion to a command |
+| `code/*/src/bluetooth.c` | USART1 (PA9/PA10, AF7, 9600 baud, BRR = 9375) |
+| `code/robot/src/mouvement.c` | TIM3 PWM at 1 kHz (PB4, PC7) + direction (PB3, PB10) |
+| `code/*/src/main.c` | main loop of each board |
 
-## Compiler et flasher
+## Build and flash
 
-Dans STM32CubeIDE, passer par *File → Import → Existing Projects into Workspace* et choisir `code/controlleur` ou `code/robot`. On peut aussi lancer `make` dans le dossier du projet (Makefile du framework Polytech) ; le binaire sort dans `bin/prog.elf`.
+In STM32CubeIDE, use *File → Import → Existing Projects into Workspace* and pick `code/controlleur` or `code/robot`. You can also run `make` in the project folder (Polytech framework Makefile); the binary ends up in `bin/prog.elf`.
 
-## Le boost
+## The boost converter
 
-| Grandeur | Formule | Valeur |
+| Quantity | Formula | Value |
 |---|---|---|
-| Fréquence | f = 1,44 / ((R1 + 2 R2) C) | 20 kHz (R1 = 12 kΩ, R2 = 30 kΩ, C = 1 nF) |
-| Rapport cyclique | D = (R1 + R2) / (R1 + 2 R2) | 58,3 % |
-| Sortie idéale | Vout = Vin / (1 − D) | 12 V pour 5 V |
+| Frequency | f = 1.44 / ((R1 + 2 R2) C) | 20 kHz (R1 = 12 kΩ, R2 = 30 kΩ, C = 1 nF) |
+| Duty cycle | D = (R1 + R2) / (R1 + 2 R2) | 58.3 % |
+| Ideal output | Vout = Vin / (1 − D) | 12 V from 5 V |
 
-La simulation LTspice `oscillateur_boost.asc` utilise L = 1 mH, une MBR745, Ce = Cs = 1 µF et un shunt de 0,1 Ω. Moyenne de la sortie entre 8 et 10 ms :
+The LTspice simulation `oscillateur_boost.asc` uses L = 1 mH, an MBR745, Ce = Cs = 1 µF and a 0.1 Ω shunt. Average output between 8 and 10 ms:
 
-| Charge | Vout simulée |
+| Load | Simulated Vout |
 |---|---|
-| 470 Ω | 12,6 V |
-| 1 kΩ | 16,9 V (conduction discontinue) |
+| 470 Ω | 12.6 V |
+| 1 kΩ | 16.9 V (discontinuous conduction) |
 
-Deux composants de la carte diffèrent de la simulation :
+Two parts on the board differ from the simulation:
 
-| Composant | Simulation | Carte |
+| Part | Simulation | Board |
 |---|---|---|
-| MOSFET | Si4982DY (bibliothèque `SP.lib` du TP) | IRF740N |
-| Diode | MBR745 (Schottky, TO-220) | diode rapide fournie par l'enseignant, équivalente |
+| MOSFET | Si4982DY (from the course's `SP.lib` library) | IRF740N |
+| Diode | MBR745 (Schottky, TO-220) | equivalent fast diode supplied by the teacher |
 
-## Résultats
+## Results
 
-| Partie | État |
+| Part | Status |
 |---|---|
-| Moteurs (PWM + sens) | fonctionne |
-| Liaison Bluetooth + protocole | fonctionne |
-| Joystick I2C | fonctionne |
-| Boost + NE555 sur plaque perforée | fonctionne, 12 V mesurés |
-| Montage final intégré | non abouti : soudures ratées (c'était notre première fois) |
+| Motors (PWM + direction) | works |
+| Bluetooth link + protocol | works |
+| I2C joystick | works |
+| Boost + NE555 on perfboard | works, 12 V measured |
+| Final integrated build | not finished: bad solder joints (our first time soldering) |
 
-## Limites
+## Limitations
 
-- Si une transaction I2C est coupée en plein milieu, le joystick bloque la ligne SDA. Il faut couper puis remettre son alimentation.
-- La manette calcule une vitesse proportionnelle à l'inclinaison mais ne l'envoie pas : la vitesse est fixée côté voiture.
-- Le boost n'est pas régulé, donc sa tension de sortie dépend beaucoup de la charge.
+- If an I2C transaction is cut off halfway, the joystick holds the SDA line low. Its power has to be cycled.
+- The controller computes a speed proportional to the joystick tilt but does not send it: the speed is fixed on the car side.
+- The boost converter is not regulated, so its output voltage depends heavily on the load.
